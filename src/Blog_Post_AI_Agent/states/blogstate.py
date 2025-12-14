@@ -1,4 +1,4 @@
-from typing import Annotated, TypedDict
+from typing import Annotated, TypedDict, Dict, Any
 from pydantic import BaseModel, Field
 
 class Blog(BaseModel):
@@ -13,3 +13,5 @@ class BlogState(TypedDict):
     topic:str
     blog:Blog
     current_language:str 
+    translated_content: str 
+    final_post: Dict[str, Any] 

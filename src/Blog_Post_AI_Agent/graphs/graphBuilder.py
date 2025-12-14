@@ -1,5 +1,4 @@
 from langgraph.graph import StateGraph, START, END
-from src.Blog_Post_AI_Agent.llm.groqllm import GroqLLm
 from src.Blog_Post_AI_Agent.states.blogstate import BlogState
 from src.Blog_Post_AI_Agent.nodes.blognode import BlogNode
 
@@ -19,12 +18,14 @@ class GraphBuilder:
         # Add the chatbot node to the graph
         self.graph.add_node("title_creation", self.blog_node_obj.title_creation )
         self.graph.add_node("content_generation",self.blog_node_obj.content_generation )
+        self.graph.add_node("format_output", self.blog_node_obj.format_output)
 
         # --- edge ---
         # Define the flow: Start -> Chatbot(Generating blog) -> End
         self.graph.add_edge(START, "title_creation")
         self.graph.add_edge("title_creation", "content_generation")
-        self.graph.add_edge("content_generation", END)
+        self.graph.add_edge("content_generation", "format_output")
+        self.graph.add_edge("format_output", END)
 
         return self.graph
     
@@ -56,13 +57,14 @@ class GraphBuilder:
             self.blog_node_obj.route_decision,
             {
                 "bangla":"bangla_translation",
-                "hindi":"hindi_translation"
+                "hindi":"hindi_translation",
+                "__default__": "format_output"  
             }
         )
 
-        # 🛑 Update Edges: Translation nodes should now go to format_output, then END.
-        self.graph.add_edge("bangla_translation", "format_output") # <-- CHANGED
-        self.graph.add_edge("hindi_translation", "format_output")  # <-- CHANGED
+        #  Edges: Translation nodes should now go to format_output, then END.
+        self.graph.add_edge("bangla_translation", "format_output")
+        self.graph.add_edge("hindi_translation", "format_output") 
         self.graph.add_edge("format_output", END)
 
         return self.graph
@@ -78,9 +80,3 @@ class GraphBuilder:
         
         return self.graph.compile()
     
-# Code is for langsmith stdio
-llm = GroqLLm().get_llm()
-
-# Get the graph
-graph_builder = GraphBuilder(llm)
-graph = graph_builder.build_language_graph().compile()

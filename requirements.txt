@@ -8,3 +8,4 @@ uvicorn
 watchdog
 langgraph-cli[inmem]
 langchain-google-genai
+jinja2

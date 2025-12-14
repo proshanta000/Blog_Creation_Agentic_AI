@@ -1,49 +1,56 @@
 import os
 from langchain_groq import ChatGroq
-from dotenv import load_dotenv
 
 
 class GroqLLm:
     """
-    Handles initialization and configuration of the Groq LLM using environment variables.
+    Handles initialization and configuration of the Groq LLM.
+    
+    This class strictly requires both the API key and model name to be passed 
+    directly during initialization, enabling a fully dynamic system based 
+    on user selections from the UI.
     """
-    def __init__(self):
+    def __init__(self, api_key: str, model_name: str):
         """
-        Initializes the GroqLLm class.
+        Initializes the GroqLLm class and the ChatGroq instance.
         
-        Loads environment variables from a .env file to ensure configuration is available.
+        Args:
+            api_key (str): The Groq API key provided directly from the UI form. 
+                           (Mandatory)
+            model_name (str): The name of the Groq model to use, selected from the UI form.
+                              (Mandatory)
         """
-        # Load environment variables from the .env file
-        load_dotenv()
+        
+        # 1. Store mandatory arguments
+        self._api_key = api_key
+        self._model_name = model_name
+        
+        # 2. Validation: Ensure both critical pieces of data are present
+        if not self._api_key or not self._api_key.strip():
+            raise ValueError("API Key is required but was not provided.")
+            
+        if not self._model_name or not self._model_name.strip():
+            raise ValueError("Model Name is required but was not provided.")
+        
+        try:
+            # Initialize the ChatGroq model with the user-provided key and model
+            self._llm = ChatGroq(
+                api_key=self._api_key, 
+                model=self._model_name,
+                temperature=0.0
+            )
+            print(f"Successfully initialized GroqLLM with model: {self._model_name}")
+            
+        except Exception as e:
+            # Catch any exception during initialization (e.g., connection errors, invalid model name)
+            raise ValueError(f"Failed to initialize ChatGroq model '{self._model_name}': {e}")
 
 
     def get_llm(self):
         """
         Retrieves the configured Groq LLM instance.
 
-        Fetches the API key from the environment and initializes the ChatGroq model
-        with the model name "llama-3.1-8b-instant".
-        
         Returns:
-            ChatGroq: An instance of the Groq model.
-        
-        Raises:
-            ValueError: If there is an error during model initialization,
-                        often due to a missing or invalid API key.
+            ChatGroq: The initialized Groq model instance.
         """
-        try:
-            # Fetch the GROQ_API_KEY from the environment
-            self.groq_api_key = os.getenv("GROQ_API_KEY")
-            
-            # Check if the key was found
-            if not self.groq_api_key:
-                raise ValueError("GROQ_API_KEY not found in environment variables. Please check your .env file.")
-
-            # Initialize the ChatGroq model
-            llm = ChatGroq(api_key=self.groq_api_key, model="llama-3.1-8b-instant")
-
-            return llm
-        
-        except Exception as e:
-            # Catch any exception during the process and raise a detailed error
-            raise ValueError(f"Failed to initialize GroqLLm: {e}")
+        return self._llm

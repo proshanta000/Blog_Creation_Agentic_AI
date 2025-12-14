@@ -51,7 +51,6 @@ class BlogNode:
             Translate the content to the specific language.
             """
             
-            # NOTE: Fixed typo from 'translate_ptompt' to 'translate_prompt'
             translate_prompt = """
             Translate the following content into {current_language}.
             - Maintain the original tone, style , and formatting.
@@ -70,20 +69,22 @@ class BlogNode:
                 HumanMessage(translate_prompt.format(current_language=current_language, blog_content=blog_content))
             ]
 
-            # 🛑 CRITICAL FIX: Use standard invoke() to return raw text
+            
             translated_response = self.llm.invoke(messages)
             translated_content = translated_response.content
             
             # Determine the correct key for the translated content (e.g., 'content_bangla')
-            state_key = f"content_{current_language.lower()}"
+            state_key = f"content_{state['current_language'].lower()}"
 
-            # Update the state with the new content while keeping the title
+            # Create a copy of the existing 'blog' dictionary
+            updated_blog = state['blog'].copy()
+            # Add the new translated content to the 'blog' dictionary
+            updated_blog[state_key] = translated_content
+            
+            # Return the updated state
+            # Return the updated state
             return {
-                "blog": {
-                    "title": state['blog']['title'],
-                    "content": state['blog']['content'], # Keep English version
-                    state_key: translated_content       # Add translated version
-                }
+                "translated_content": translated_content
             }
     
 
@@ -93,8 +94,8 @@ class BlogNode:
 
     def format_output(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Selects the final translated content, formats the blog post,
-        and prepares the final state object.
+        Selects the final content, formats the blog post,
+        and prepares the final state object for the consumer (FastAPI).
         """
         print("--- Running format_output Node ---")
 
@@ -102,16 +103,20 @@ class BlogNode:
         blog_data = state.get("blog", {})
         title = blog_data.get("title", "Untitled Blog Post")
         
-        # 1. Select the final content based on the target language
-        # We look for the translated content key (e.g., 'content_bangla')
-        content_key = f"content_{output_language}"
-        final_content = blog_data.get(content_key)
-        
-        # Fallback to the original English content if translation failed/wasn't done
-        if not final_content:
-            final_content = blog_data.get("content", "Content generation or translation failed.")
+        # Default to English content
+        final_content = blog_data.get("content", "Error: Content generation failed.")
+
+        # If language is NOT English, we try to grab the translated content
+        if output_language not in ["english", "en"]:
+            # Check if translation node populated 'translated_content'
+            translated_text = state.get("translated_content")
+            if translated_text:
+                final_content = translated_text
+            else:
+                # Fallback or error logging if needed
+                print(f"Warning: No translated content found for {output_language}. Falling back to English.")
             
-        # 2. Structure the Final Result for consumption
+        # 2. Structure the Final Result for consumption (This is the key fix)
         final_blog_post = {
             "title": title,
             "language": output_language,
@@ -119,9 +124,43 @@ class BlogNode:
             "status": "Ready for Publishing"
         }
         
-        # 3. Return the Final Update
-        # We return the structured final post and a status message.
+        # 3. Return the Final Update with the EXACT KEY the frontend expects: "final_post"
+        # The return dictionary structure must match the expected keys in BlogState if it's a typed state.
+        # But for the *final output*, LangGraph often just needs a key that holds the result.
         return {
-            "final_post": final_blog_post,
+            "final_post": final_blog_post, # <--- THIS IS THE KEY THE FRONTEND LOOKS FOR
             "status_message": f"Blog post successfully generated and formatted in {output_language.upper()}."
         }
+    
+    
+    def route_decision(self, state: Dict[str, Any]) -> str:
+        """
+        Decides the next step based on the requested language ('bangla' or 'hindi').
+        Returns the key matching the conditional edge dictionary in GraphBuilder.
+        """
+        # Fix: Checks 'current_language' instead of 'language'
+        language = state.get("current_language", "").lower()
+        
+        if language in ["bangla", "hindi"]:
+            return language
+        else:
+            # This triggers the "__default__" edge in GraphBuilder
+            return "__default__" 
+
+
+    def route(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        This node ensures the 'current_language' is set in the state 
+        before moving to translation or format_output.
+        """
+        # If we already have current_language in state (from app.py), use it.
+        # Otherwise fallback to checking 'language' or default.
+        language = state.get("current_language") or state.get("language", "")
+        language = language.lower()
+
+        # If still no language is specified, set it to 'english'
+        if not language:
+            language = "english"
+            
+        # Return the state update, setting the current_language
+        return {"current_language": language}
