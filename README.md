@@ -5,4 +5,5 @@ sdk: docker
 emoji: 💻
 colorTo: gray
 short_description: Blog Post Generation Agent
+app_port: 7860
 ---
