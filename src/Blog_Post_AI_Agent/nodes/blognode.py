@@ -81,7 +81,7 @@ class BlogNode:
             # Add the new translated content to the 'blog' dictionary
             updated_blog[state_key] = translated_content
             
-            # Return the updated state
+            
             # Return the updated state
             return {
                 "translated_content": translated_content
@@ -116,7 +116,7 @@ class BlogNode:
                 # Fallback or error logging if needed
                 print(f"Warning: No translated content found for {output_language}. Falling back to English.")
             
-        # 2. Structure the Final Result for consumption (This is the key fix)
+        # 2. Structure the Final Result for consumption 
         final_blog_post = {
             "title": title,
             "language": output_language,
@@ -125,10 +125,8 @@ class BlogNode:
         }
         
         # 3. Return the Final Update with the EXACT KEY the frontend expects: "final_post"
-        # The return dictionary structure must match the expected keys in BlogState if it's a typed state.
-        # But for the *final output*, LangGraph often just needs a key that holds the result.
         return {
-            "final_post": final_blog_post, # <--- THIS IS THE KEY THE FRONTEND LOOKS FOR
+            "final_post": final_blog_post, 
             "status_message": f"Blog post successfully generated and formatted in {output_language.upper()}."
         }
     
@@ -138,7 +136,7 @@ class BlogNode:
         Decides the next step based on the requested language ('bangla' or 'hindi').
         Returns the key matching the conditional edge dictionary in GraphBuilder.
         """
-        # Fix: Checks 'current_language' instead of 'language'
+        # Checks 'current_language' instead of 'language'
         language = state.get("current_language", "").lower()
         
         if language in ["bangla", "hindi"]:
