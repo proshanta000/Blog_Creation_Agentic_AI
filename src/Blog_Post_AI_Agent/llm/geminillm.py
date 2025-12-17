@@ -34,11 +34,10 @@ class GeminiLLm:
         
         try:
             # 3. Initialize the ChatGoogleGenerativeAI model
-            # Note: The LangChain parameter name for the API key is 'google_api_key'
             self._llm = ChatGoogleGenerativeAI(
                 google_api_key=self._api_key, 
                 model=self._model_name,
-                temperature=0.0
+                temperature=0.2
             )
             print(f"Successfully initialized GeminiLLM with model: {self._model_name}")
             

@@ -37,7 +37,7 @@ class GroqLLm:
             self._llm = ChatGroq(
                 api_key=self._api_key, 
                 model=self._model_name,
-                temperature=0.0
+                temperature=0.2
             )
             print(f"Successfully initialized GroqLLM with model: {self._model_name}")
             
